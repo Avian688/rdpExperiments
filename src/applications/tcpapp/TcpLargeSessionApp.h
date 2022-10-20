@@ -1,0 +1,74 @@
+//
+// Copyright (C) 2004 OpenSim Ltd.
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+//
+
+#ifndef __INET_TCPLARGESESSIONAPP_H
+#define __INET_TCPLARGESESSIONAPP_H
+
+#include <vector>
+
+#include <inet/common/lifecycle/LifecycleOperation.h>
+#include <inet/common/lifecycle/NodeStatus.h>
+
+#include "TcpLargeAppBase.h"
+#include "../../transportlayer/tcp/HighBDPTcp.h"
+
+namespace inet {
+
+/**
+ * Single-connection Large TCP application.
+ */
+class INET_API TcpLargeSessionApp : public TcpLargeAppBase
+{
+  protected:
+    // parameters
+    struct Command {
+        simtime_t tSend;
+        long numBytes = 0;
+        Command(simtime_t t, long n) { tSend = t; numBytes = n; }
+    };
+    typedef std::vector<Command> CommandVector;
+    CommandVector commands;
+
+    bool activeOpen = false;
+    simtime_t tOpen;
+    simtime_t tSend;
+    simtime_t tClose;
+    long sendBytes = 0;
+
+    // state
+    int commandIndex = -1;
+    cMessage *timeoutMsg = nullptr;
+
+    tcp::HighBDPTcp* tcpMod = nullptr;
+
+  protected:
+    virtual void handleStartOperation(LifecycleOperation *operation) override;
+    virtual void handleStopOperation(LifecycleOperation *operation) override;
+    virtual void handleCrashOperation(LifecycleOperation *operation) override;
+
+    virtual int numInitStages() const override { return NUM_INIT_STAGES; }
+    virtual void initialize(int stage) override;
+    virtual void finish() override;
+    virtual void refreshDisplay() const override;
+
+    virtual Packet *createDataPacket(long sendBytes);
+    virtual void sendData();
+
+    virtual void handleTimer(cMessage *msg) override;
+    virtual void socketEstablished(TcpSocket *socket) override;
+    virtual void socketDataArrived(TcpSocket *socket, Packet *msg, bool urgent) override;
+    virtual void socketClosed(TcpSocket *socket) override;
+    virtual void socketFailure(TcpSocket *socket, int code) override;
+
+  public:
+    TcpLargeSessionApp() {}
+    virtual ~TcpLargeSessionApp();
+};
+
+} // namespace inet
+
+#endif
+
